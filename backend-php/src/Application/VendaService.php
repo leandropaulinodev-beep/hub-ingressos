@@ -47,6 +47,17 @@ class VendaService
             $eventId = (int) $eventId;
             $quantity = (int) $quantity;
 
+            $evento = $this->eventoRepository->buscarEventoPorId($eventId);
+            if (!$evento) {
+                return $this->errorResponse('Evento não encontrado', 404);
+            }
+
+            $dataEvento = new \DateTimeImmutable((string) $evento['data_evento']);
+            $agora = new \DateTimeImmutable();
+            if ($dataEvento < $agora) {
+                return $this->errorResponse('Este show já foi finalizado e não aceita novas compras', 409);
+            }
+
             $this->db->beginTransaction();
             $transactionStarted = true;
 

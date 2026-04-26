@@ -53,4 +53,15 @@ class PdoEventoRepository implements EventoRepositoryInterface
 
         return $stmt->fetchAll();
     }
+
+    public function buscarEventoPorId(int $eventId): ?array
+    {
+        $stmt = $this->db->execute(
+            'SELECT id, nome, data_evento FROM eventos WHERE id = :id LIMIT 1',
+            ['id' => $eventId]
+        );
+
+        $evento = $stmt->fetch();
+        return $evento ?: null;
+    }
 }

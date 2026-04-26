@@ -37,12 +37,28 @@ const inferCategory = (evento) => {
   return 'Shows';
 };
 
+const getCurrentMonthValue = () => {
+  const now = new Date();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  return `${now.getFullYear()}-${month}`;
+};
+
+const isEventoFinalizado = (dateValue) => {
+  const eventoDate = new Date(dateValue);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return eventoDate < today;
+};
+
 function App() {
+  const EVENTS_PER_PAGE = 6;
   const [searchTerm, setSearchTerm] = useState('');
   const [cityFilter, setCityFilter] = useState('São Paulo');
   const [dateFilter, setDateFilter] = useState('Todas as datas');
   const [categoryFilter, setCategoryFilter] = useState('Shows e teatro');
   const [priceFilter, setPriceFilter] = useState('Preço');
+  const [calendarMonth, setCalendarMonth] = useState(getCurrentMonthValue());
+  const [currentPage, setCurrentPage] = useState(1);
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [novosEventos, setNovosEventos] = useState([]);
   const [loadingNovosEventos, setLoadingNovosEventos] = useState(true);
@@ -205,6 +221,98 @@ function App() {
     return eventosBase.slice(0, 8);
   }, [eventosBase, eventosDoBanco]);
 
+  const totalPages = Math.max(1, Math.ceil(filteredEventos.length / EVENTS_PER_PAGE));
+
+  const paginatedEventos = useMemo(() => {
+    const start = (currentPage - 1) * EVENTS_PER_PAGE;
+    return filteredEventos.slice(start, start + EVENTS_PER_PAGE);
+  }, [filteredEventos, currentPage, EVENTS_PER_PAGE]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, cityFilter, dateFilter, categoryFilter, priceFilter]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
+
+  const buildVisiblePages = () => {
+    if (totalPages <= 5) {
+      return Array.from({ length: totalPages }, (_, index) => index + 1);
+    }
+
+    if (currentPage <= 3) {
+      return [1, 2, 3, 4, 5];
+    }
+
+    if (currentPage >= totalPages - 2) {
+      return [totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
+    }
+
+    return [currentPage - 2, currentPage - 1, currentPage, currentPage + 1, currentPage + 2];
+  };
+
+  const visiblePages = buildVisiblePages();
+
+  const calendarData = useMemo(() => {
+    const [yearText, monthText] = calendarMonth.split('-');
+    const year = Number(yearText);
+    const monthIndex = Number(monthText) - 1;
+
+    if (!Number.isFinite(year) || !Number.isFinite(monthIndex) || monthIndex < 0 || monthIndex > 11) {
+      return {
+        monthLabel: '',
+        weekdayLabels: ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab'],
+        calendarCells: [],
+      };
+    }
+
+    const firstDay = new Date(year, monthIndex, 1);
+    const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
+    const firstWeekday = firstDay.getDay();
+
+    const eventosDoMes = todosEventos
+      .filter((evento) => {
+        const eventDate = new Date(evento.data);
+        return eventDate.getFullYear() === year && eventDate.getMonth() === monthIndex;
+      })
+      .sort((a, b) => new Date(a.data) - new Date(b.data));
+
+    const eventosByDay = eventosDoMes.reduce((acc, evento) => {
+      const day = new Date(evento.data).getDate();
+      if (!acc[day]) {
+        acc[day] = [];
+      }
+      acc[day].push(evento);
+      return acc;
+    }, {});
+
+    const calendarCells = [];
+    for (let i = 0; i < firstWeekday; i += 1) {
+      calendarCells.push({ type: 'empty', id: `empty-${i}` });
+    }
+
+    for (let day = 1; day <= daysInMonth; day += 1) {
+      calendarCells.push({
+        type: 'day',
+        id: `day-${day}`,
+        day,
+        eventos: eventosByDay[day] || [],
+      });
+    }
+
+    return {
+      monthLabel: new Date(year, monthIndex, 1).toLocaleDateString('pt-BR', {
+        month: 'long',
+        year: 'numeric',
+      }),
+      weekdayLabels: ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab'],
+      calendarCells,
+    };
+  }, [calendarMonth, todosEventos]);
+
   const scrollCarousel = (direction) => {
     if (!carouselRef.current) {
       return;
@@ -344,6 +452,9 @@ function App() {
               <div className="event-detail-meta">
                 <span className="detail-pill">Evento selecionado</span>
                 <span className="detail-pill secondary">R$ {Number(selectedEvent.preco || 0).toFixed(2)}</span>
+                {isEventoFinalizado(selectedEvent.data) && (
+                  <span className="detail-pill finalized">Show finalizado</span>
+                )}
               </div>
               <h2>{selectedEvent.nome}</h2>
               <p><strong>Data:</strong> {formatListDate(selectedEvent.data).full}</p>
@@ -356,49 +467,144 @@ function App() {
                 eventName={selectedEvent.nome}
                 quantity={1}
                 maxQuantity={selectedEvent.estoqueDisponivel}
+                isFinalized={isEventoFinalizado(selectedEvent.data)}
               />
             </div>
           </section>
         )}
 
-        <section className="eventos-section">
-          <h2>{filteredEventos.length} eventos em {cityFilter === 'Todos os locais' ? 'todos os locais' : cityFilter}</h2>
+        <div className="event-content-layout">
+          <section className="eventos-section">
+            <h2>{filteredEventos.length} eventos em {cityFilter === 'Todos os locais' ? 'todos os locais' : cityFilter}</h2>
 
-          <div className="event-list">
-            {filteredEventos.map((evento) => {
-              const eventDate = formatListDate(evento.data);
+            <div className="event-list">
+              {paginatedEventos.map((evento) => {
+                const eventDate = formatListDate(evento.data);
 
-              return (
-                <article key={evento.id} className="event-list-row">
-                  <div className="event-date-card">
-                    <span>{eventDate.month}</span>
-                    <strong>{eventDate.day}</strong>
-                    <small>{eventDate.weekday}</small>
-                  </div>
+                return (
+                  <article key={evento.id} className="event-list-row">
+                    <div className="event-date-card">
+                      <span>{eventDate.month}</span>
+                      <strong>{eventDate.day}</strong>
+                      <small>{eventDate.weekday}</small>
+                    </div>
 
-                  <div className="event-row-content">
-                    <h3>{evento.nome}</h3>
-                    <p>{eventDate.time} • {evento.cidade} • {evento.local}</p>
-                    <p className="event-row-description">{evento.descricao}</p>
-                  </div>
+                    <div className="event-row-content">
+                      <div className="event-row-title">
+                        <h3>{evento.nome}</h3>
+                        {isEventoFinalizado(evento.data) && (
+                          <span className="status-flag finalized">Show finalizado</span>
+                        )}
+                      </div>
+                      <p>{eventDate.time} • {evento.cidade} • {evento.local}</p>
+                      <p className="event-row-description">{evento.descricao}</p>
+                    </div>
 
-                  <div className="event-row-actions">
+                    <div className="event-row-actions">
+                      <button
+                        className="row-link-button"
+                        onClick={() => setSelectedEvent(evento)}
+                      >
+                        Ver ingressos
+                      </button>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+
+            {filteredEventos.length > 0 && (
+              <div className="pagination" aria-label="Paginação de eventos">
+                <button
+                  type="button"
+                  className="pagination-button"
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+                >
+                  Anterior
+                </button>
+
+                <div className="pagination-pages">
+                  {visiblePages.map((page) => (
                     <button
-                      className="row-link-button"
-                      onClick={() => setSelectedEvent(evento)}
+                      key={page}
+                      type="button"
+                      className={`pagination-page ${page === currentPage ? 'active' : ''}`}
+                      onClick={() => setCurrentPage(page)}
+                      aria-current={page === currentPage ? 'page' : undefined}
                     >
-                      Ver ingressos
+                      {page}
                     </button>
-                  </div>
-                </article>
-              );
-            })}
-          </div>
+                  ))}
+                </div>
 
-          {filteredEventos.length === 0 && (
-            <p className="empty-search-message">Nenhum evento encontrado para sua busca.</p>
-          )}
-        </section>
+                <button
+                  type="button"
+                  className="pagination-button"
+                  disabled={currentPage === totalPages}
+                  onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+                >
+                  Próxima
+                </button>
+              </div>
+            )}
+
+            {filteredEventos.length === 0 && (
+              <p className="empty-search-message">Nenhum evento encontrado para sua busca.</p>
+            )}
+          </section>
+
+          <section className="calendar-section compact">
+            <div className="calendar-header">
+              <div>
+                <h2>Calendário de espetáculos</h2>
+                <p>{calendarData.monthLabel}</p>
+              </div>
+              <label className="calendar-month-picker" htmlFor="calendar-month-input">
+                Mês
+                <input
+                  id="calendar-month-input"
+                  type="month"
+                  value={calendarMonth}
+                  onChange={(e) => setCalendarMonth(e.target.value)}
+                />
+              </label>
+            </div>
+
+            <div className="calendar-grid" role="grid" aria-label="Calendário mensal de espetáculos">
+              {calendarData.weekdayLabels.map((weekday) => (
+                <span key={weekday} className="calendar-weekday" role="columnheader">{weekday}</span>
+              ))}
+
+              {calendarData.calendarCells.map((cell) => {
+                if (cell.type === 'empty') {
+                  return <div key={cell.id} className="calendar-day empty" aria-hidden="true" />;
+                }
+
+                return (
+                  <div key={cell.id} className="calendar-day" role="gridcell">
+                    <strong>{cell.day}</strong>
+                    <div className="calendar-day-events">
+                      {cell.eventos.slice(0, 1).map((evento) => (
+                        <button
+                          key={evento.id}
+                          type="button"
+                          className={`calendar-event-chip ${isEventoFinalizado(evento.data) ? 'finalized' : ''}`}
+                          onClick={() => setSelectedEvent(evento)}
+                        >
+                          {evento.nome}
+                        </button>
+                      ))}
+                      {cell.eventos.length > 1 && (
+                        <span className="calendar-more-events">+{cell.eventos.length - 1}</span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        </div>
       </main>
     </div>
   );

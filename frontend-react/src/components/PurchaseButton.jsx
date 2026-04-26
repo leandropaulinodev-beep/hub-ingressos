@@ -14,6 +14,7 @@ const PurchaseButton = ({
   eventName,
   quantity = 1,
   maxQuantity = 5,
+  isFinalized = false,
 }) => {
   const maxAllowedQuantity = Math.max(1, Math.min(10, Number(maxQuantity) || 1));
   const [selectedQuantity, setSelectedQuantity] = useState(
@@ -53,6 +54,11 @@ const PurchaseButton = ({
    * 4. Trata sucesso ou erro
    */
   const handleCompra = async () => {
+    if (isFinalized) {
+      setError('Este show já foi finalizado e não aceita novas compras.');
+      return;
+    }
+
     // Reset estados anteriores
     setError(null);
     setCancelMessage(null);
@@ -81,9 +87,7 @@ const PurchaseButton = ({
         setError(response.error);
         
         // Diferenciar mensagens por tipo de erro
-        if (response.statusCode === 409) {
-          setError('Desculpe, não há ingressos disponíveis para este evento.');
-        } else if (response.statusCode === 503) {
+        if (response.statusCode === 503) {
           setError('Serviço temporariamente indisponível. Tente novamente em alguns momentos.');
         } else if (response.statusCode === 402) {
           setError('Pagamento recusado. Verifique suas informações bancárias.');
@@ -134,13 +138,18 @@ const PurchaseButton = ({
     <div className="purchase-button-container">
       <div className="purchase-info">
         <h3>{eventName}</h3>
+        {isFinalized && (
+          <div className="locked-message">
+            <p>Este show já foi finalizado. A compra está bloqueada.</p>
+          </div>
+        )}
         <div className="quantity-control">
           <label htmlFor={`quantity-${eventId}`}>Quantidade</label>
           <select
             id={`quantity-${eventId}`}
             value={selectedQuantity}
             onChange={(e) => setSelectedQuantity(Number(e.target.value))}
-            disabled={isLoading || isCancelling || success}
+            disabled={isLoading || isCancelling || success || isFinalized}
           >
             {Array.from({ length: maxAllowedQuantity }, (_, index) => index + 1).map((qty) => (
               <option key={qty} value={qty}>
@@ -199,9 +208,9 @@ const PurchaseButton = ({
         <button
           onClick={handleCompra}
           className="purchase-button"
-          disabled={isLoading}
+          disabled={isLoading || isFinalized}
         >
-          {isLoading ? 'Processando...' : 'Comprar Ingresso'}
+          {isLoading ? 'Processando...' : isFinalized ? 'Show finalizado' : 'Comprar Ingresso'}
         </button>
       )}
 
@@ -217,7 +226,7 @@ const PurchaseButton = ({
       )}
 
       {/* Botão para tentar novamente após erro */}
-      {error && !isLoading && (
+      {error && !isLoading && !isFinalized && (
         <button
           onClick={handleCompra}
           className="purchase-button retry-button"
