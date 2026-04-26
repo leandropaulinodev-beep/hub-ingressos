@@ -38,6 +38,24 @@ hub-ingressos/
 └── README.md
 ```
 
+## Decisões Arquiteturais
+
+### Comunicação síncrona
+
+A comunicação entre o serviço de Vendas (PHP) e o serviço de Catálogo (Python) é realizada de forma síncrona via HTTP. Essa abordagem foi escolhida pela simplicidade de implementação e por garantir resposta imediata ao usuário durante o fluxo de compra. Em cenários de maior escala, essa comunicação poderia evoluir para um modelo assíncrono com uso de mensageria.
+
+### Reserva de estoque
+
+Para evitar a venda de ingressos além da capacidade disponível (overbooking), o serviço de Catálogo realiza uma validação de estoque antes da confirmação da compra. A abordagem considera a possibilidade de implementação de reservas temporárias, garantindo consistência mesmo em cenários concorrentes.
+
+### Separação de serviços
+
+O sistema foi dividido em três serviços independentes (Frontend, Vendas e Catálogo), cada um com responsabilidades bem definidas. Essa separação segue o princípio de baixo acoplamento e alta coesão, facilitando a manutenção, evolução e escalabilidade da aplicação.
+
+### Escalabilidade futura
+
+A arquitetura foi pensada para suportar crescimento. Em cenários de alta demanda, é possível escalar os serviços de forma independente, além de incorporar soluções como cache (ex: Redis), filas de mensageria (ex: RabbitMQ/Kafka) e balanceamento de carga para melhorar a performance e resiliência do sistema.
+
 ## Como Executar
 
 ### Pré-requisitos
