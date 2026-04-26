@@ -1,0 +1,9 @@
+{
+  "name": "hub-ingressos-workspace",
+  "private": true,
+  "scripts": {
+    "start": "npm --prefix frontend-react start",
+    "starte": "npm --prefix frontend-react start",
+    "install:frontend": "npm --prefix frontend-react install"
+  }
+}
