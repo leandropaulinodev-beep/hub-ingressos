@@ -335,6 +335,11 @@
   background: #ffdede;
 }
 
+.detail-pill.soldout {
+  color: #9c2020;
+  background: #ffe7e7;
+}
+
 .event-detail-card h2 {
   font-size: 2rem;
   margin-bottom: 1rem;
@@ -606,6 +611,11 @@
   background: #ffdede;
 }
 
+.status-flag.soldout {
+  color: #9c2020;
+  background: #ffe7e7;
+}
+
 .event-row-content p {
   margin: 0.18rem 0;
   color: #68706d;
@@ -629,6 +639,13 @@
   color: #5f7c21;
   font-weight: 800;
   cursor: pointer;
+}
+
+.row-link-button:disabled {
+  border-color: #ecc0c0;
+  background: #fff2f2;
+  color: #9b3a3a;
+  cursor: not-allowed;
 }
 
 .empty-search-message {

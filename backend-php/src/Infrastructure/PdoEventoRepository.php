@@ -20,8 +20,24 @@ class PdoEventoRepository implements EventoRepositoryInterface
         $safeLimit = max(1, min(30, $limit));
 
         $stmt = $this->db->execute(
-            "SELECT id, nome, descricao, data_evento, local, preco, estoque_total, criado_em
-             FROM eventos
+            "SELECT
+                e.id,
+                e.nome,
+                e.descricao,
+                e.data_evento,
+                e.local,
+                e.preco,
+                e.estoque_total,
+                GREATEST(
+                    e.estoque_total - COALESCE((
+                        SELECT SUM(v.quantity)
+                        FROM vendas v
+                        WHERE v.event_id = e.id AND v.status = 'CONFIRMADA'
+                    ), 0),
+                    0
+                ) AS estoque_disponivel,
+                e.criado_em
+             FROM eventos e
              ORDER BY criado_em DESC, id DESC
              LIMIT {$safeLimit}"
         );
@@ -57,7 +73,21 @@ class PdoEventoRepository implements EventoRepositoryInterface
     public function buscarEventoPorId(int $eventId): ?array
     {
         $stmt = $this->db->execute(
-            'SELECT id, nome, data_evento FROM eventos WHERE id = :id LIMIT 1',
+            "SELECT
+                e.id,
+                e.nome,
+                e.data_evento,
+                GREATEST(
+                    e.estoque_total - COALESCE((
+                        SELECT SUM(v.quantity)
+                        FROM vendas v
+                        WHERE v.event_id = e.id AND v.status = 'CONFIRMADA'
+                    ), 0),
+                    0
+                ) AS estoque_disponivel
+             FROM eventos e
+             WHERE e.id = :id
+             LIMIT 1",
             ['id' => $eventId]
         );
 

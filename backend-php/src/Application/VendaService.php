@@ -52,6 +52,18 @@ class VendaService
                 return $this->errorResponse('Evento não encontrado', 404);
             }
 
+            $estoqueDisponivel = (int) ($evento['estoque_disponivel'] ?? 0);
+            if ($estoqueDisponivel <= 0) {
+                return $this->errorResponse('Ingressos esgotados para este evento', 409);
+            }
+
+            if ($quantity > $estoqueDisponivel) {
+                return $this->errorResponse(
+                    "Estoque insuficiente. Disponível: {$estoqueDisponivel} ingresso(s)",
+                    409
+                );
+            }
+
             $dataEvento = new \DateTimeImmutable((string) $evento['data_evento']);
             $agora = new \DateTimeImmutable();
             if ($dataEvento < $agora) {

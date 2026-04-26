@@ -225,6 +225,15 @@
   font-size: 0.92rem;
 }
 
+.locked-message.soldout {
+  background: #fff2f2;
+  border-color: #ffc9c9;
+}
+
+.locked-message.soldout p {
+  color: #9b2f2f;
+}
+
 @media (max-width: 480px) {
   .purchase-button-container {
     padding: 0 1rem 1rem;

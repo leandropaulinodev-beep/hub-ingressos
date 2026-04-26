@@ -50,6 +50,8 @@ const isEventoFinalizado = (dateValue) => {
   return eventoDate < today;
 };
 
+const isEventoEsgotado = (estoqueDisponivel) => Number(estoqueDisponivel) <= 0;
+
 function App() {
   const EVENTS_PER_PAGE = 6;
   const [searchTerm, setSearchTerm] = useState('');
@@ -131,7 +133,9 @@ function App() {
       data: String(evento.data_evento).slice(0, 10),
       local: evento.local,
       cidade: 'São Paulo, Brasil',
-      estoqueDisponivel: Number(evento.estoque_total),
+      estoqueDisponivel: Number(
+        evento.estoque_disponivel ?? evento.estoque_total ?? 0
+      ),
       preco: Number(evento.preco),
       descricao: evento.descricao || 'Confira os detalhes completos deste evento e garanta seu ingresso.',
     })),
@@ -452,6 +456,9 @@ function App() {
               <div className="event-detail-meta">
                 <span className="detail-pill">Evento selecionado</span>
                 <span className="detail-pill secondary">R$ {Number(selectedEvent.preco || 0).toFixed(2)}</span>
+                {isEventoEsgotado(selectedEvent.estoqueDisponivel) && (
+                  <span className="detail-pill soldout">Esgotado</span>
+                )}
                 {isEventoFinalizado(selectedEvent.data) && (
                   <span className="detail-pill finalized">Show finalizado</span>
                 )}
@@ -468,6 +475,7 @@ function App() {
                 quantity={1}
                 maxQuantity={selectedEvent.estoqueDisponivel}
                 isFinalized={isEventoFinalizado(selectedEvent.data)}
+                isSoldOut={isEventoEsgotado(selectedEvent.estoqueDisponivel)}
               />
             </div>
           </section>
@@ -480,6 +488,9 @@ function App() {
             <div className="event-list">
               {paginatedEventos.map((evento) => {
                 const eventDate = formatListDate(evento.data);
+                const isFinalized = isEventoFinalizado(evento.data);
+                const isSoldOut = isEventoEsgotado(evento.estoqueDisponivel);
+                const isActionBlocked = isFinalized || isSoldOut;
 
                 return (
                   <article key={evento.id} className="event-list-row">
@@ -492,7 +503,10 @@ function App() {
                     <div className="event-row-content">
                       <div className="event-row-title">
                         <h3>{evento.nome}</h3>
-                        {isEventoFinalizado(evento.data) && (
+                        {isSoldOut && (
+                          <span className="status-flag soldout">Esgotado</span>
+                        )}
+                        {isFinalized && (
                           <span className="status-flag finalized">Show finalizado</span>
                         )}
                       </div>
@@ -504,8 +518,9 @@ function App() {
                       <button
                         className="row-link-button"
                         onClick={() => setSelectedEvent(evento)}
+                        disabled={isActionBlocked}
                       >
-                        Ver ingressos
+                        {isSoldOut ? 'Esgotado' : isFinalized ? 'Encerrado' : 'Ver ingressos'}
                       </button>
                     </div>
                   </article>

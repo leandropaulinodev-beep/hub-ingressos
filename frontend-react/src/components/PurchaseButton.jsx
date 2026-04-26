@@ -15,10 +15,12 @@ const PurchaseButton = ({
   quantity = 1,
   maxQuantity = 5,
   isFinalized = false,
+  isSoldOut = false,
 }) => {
-  const maxAllowedQuantity = Math.max(1, Math.min(10, Number(maxQuantity) || 1));
+  const maxAllowedQuantity = Math.max(0, Math.min(10, Number(maxQuantity) || 0));
+  const isBlocked = isFinalized || isSoldOut;
   const [selectedQuantity, setSelectedQuantity] = useState(
-    Math.min(quantity, maxAllowedQuantity)
+    Math.min(Math.max(quantity, 1), Math.max(1, maxAllowedQuantity))
   );
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -54,6 +56,11 @@ const PurchaseButton = ({
    * 4. Trata sucesso ou erro
    */
   const handleCompra = async () => {
+    if (isSoldOut) {
+      setError('Este evento está esgotado no momento.');
+      return;
+    }
+
     if (isFinalized) {
       setError('Este show já foi finalizado e não aceita novas compras.');
       return;
@@ -138,26 +145,33 @@ const PurchaseButton = ({
     <div className="purchase-button-container">
       <div className="purchase-info">
         <h3>{eventName}</h3>
+        {isSoldOut && (
+          <div className="locked-message soldout">
+            <p>Ingressos esgotados para este evento.</p>
+          </div>
+        )}
         {isFinalized && (
           <div className="locked-message">
             <p>Este show já foi finalizado. A compra está bloqueada.</p>
           </div>
         )}
-        <div className="quantity-control">
-          <label htmlFor={`quantity-${eventId}`}>Quantidade</label>
-          <select
-            id={`quantity-${eventId}`}
-            value={selectedQuantity}
-            onChange={(e) => setSelectedQuantity(Number(e.target.value))}
-            disabled={isLoading || isCancelling || success || isFinalized}
-          >
-            {Array.from({ length: maxAllowedQuantity }, (_, index) => index + 1).map((qty) => (
-              <option key={qty} value={qty}>
-                {qty} {qty === 1 ? 'ingresso' : 'ingressos'}
-              </option>
-            ))}
-          </select>
-        </div>
+        {!isBlocked && (
+          <div className="quantity-control">
+            <label htmlFor={`quantity-${eventId}`}>Quantidade</label>
+            <select
+              id={`quantity-${eventId}`}
+              value={selectedQuantity}
+              onChange={(e) => setSelectedQuantity(Number(e.target.value))}
+              disabled={isLoading || isCancelling || success || isBlocked}
+            >
+              {Array.from({ length: maxAllowedQuantity }, (_, index) => index + 1).map((qty) => (
+                <option key={qty} value={qty}>
+                  {qty} {qty === 1 ? 'ingresso' : 'ingressos'}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
 
       {/* Estado de Carregamento */}
@@ -208,9 +222,9 @@ const PurchaseButton = ({
         <button
           onClick={handleCompra}
           className="purchase-button"
-          disabled={isLoading || isFinalized}
+          disabled={isLoading || isBlocked}
         >
-          {isLoading ? 'Processando...' : isFinalized ? 'Show finalizado' : 'Comprar Ingresso'}
+          {isLoading ? 'Processando...' : isSoldOut ? 'Ingressos esgotados' : isFinalized ? 'Show finalizado' : 'Comprar Ingresso'}
         </button>
       )}
 
@@ -226,7 +240,7 @@ const PurchaseButton = ({
       )}
 
       {/* Botão para tentar novamente após erro */}
-      {error && !isLoading && !isFinalized && (
+      {error && !isLoading && !isBlocked && (
         <button
           onClick={handleCompra}
           className="purchase-button retry-button"
