@@ -80,8 +80,9 @@ try {
             exit;
         }
 
-        $eventId = $inputData['event_id'] ?? null;
-        $quantity = $inputData['quantity'] ?? null;
+        // Compatibilidade: aceita campos técnicos (EN) e amigáveis (PT-BR).
+        $eventId = $inputData['event_id'] ?? ($inputData['id_evento'] ?? null);
+        $quantity = $inputData['quantity'] ?? ($inputData['quantidade'] ?? null);
         $paymentData = $inputData['payment_data'] ?? null;
         
         // Procesar compra

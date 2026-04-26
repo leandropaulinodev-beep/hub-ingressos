@@ -1,6 +1,6 @@
 # Hub de Ingressos Healthbit
 
-Sistema completo de venda de ingressos online com arquitetura de microserviços.
+Sistema distribuído de venda de ingressos com arquitetura baseada em microserviços, focado em consistência de estoque e escalabilidade.
 
 **Tecnologias:** React, PHP, Python e MySQL
 
@@ -39,6 +39,10 @@ hub-ingressos/
 ```
 
 ## Decisões Arquiteturais
+
+### Controle de Concorrência
+
+O serviço de catálogo implementa controle de concorrência utilizando mecanismos de lock (mutex) e transações, garantindo que múltiplas requisições simultâneas não resultem em overbooking de ingressos.
 
 ### Comunicação síncrona
 
@@ -153,12 +157,12 @@ curl -X GET http://localhost:5000/health
 curl -X POST "http://localhost/hub-ingressos/backend-php/api.php?route=compras" \
   -H "Content-Type: application/json" \
   -d '{
-      "event_id": 10,
-    "quantity": 2,
-    "payment_data": {
-      "metodo": "cartao_credito",
-      "numero_cartao": "4111111111111111",
-      "validade": "12/25",
+         "event_id": 10,
+         "quantity": 2,
+      "payment_data": {
+         "method": "credit_card",
+         "card_number": "4111111111111111",
+         "expiry": "12/25",
       "cvv": "123"
     }
   }'
@@ -202,9 +206,9 @@ Content-Type: application/json
    "event_id": 10,
    "quantity": 2,
    "payment_data": {
-      "metodo": "cartao_credito",
-      "numero_cartao": "4111111111111111",
-      "validade": "12/25",
+      "method": "credit_card",
+      "card_number": "4111111111111111",
+      "expiry": "12/25",
       "cvv": "123"
    }
 }
@@ -272,8 +276,8 @@ POST http://localhost:5000/api/v1/catalogo/reservar
 
 ```json
 {
-   "event_id": 10,
-   "quantity": 1
+   "id_evento": 10,
+   "quantidade": 1
 }
 ```
 
@@ -285,11 +289,6 @@ POST http://localhost:5000/api/v1/catalogo/reservar
 4. Copie o `venda_id` retornado
 5. Faça `POST /api.php?route=cancelar`
 
-## Documentação
-
-- **API Documentation:** `docs/API_DOCUMENTATION.md`
-- **Architecture:** `docs/ARCHITECTURE.md`
-- **Final Answers:** `docs/FINAL_ANSWERS.md`
 
 ## Endpoints Principais
 
@@ -342,7 +341,7 @@ POST http://localhost:5000/api/v1/catalogo/reservar
 
 ## Performance
 
-- Cache com Redis (Não implementei, mas esta escalável)
+- Cache com Redis (preparada para uso com Redis)
 - Prepared statements para SQL
 - Índices no banco de dados
 - Compressão de responses

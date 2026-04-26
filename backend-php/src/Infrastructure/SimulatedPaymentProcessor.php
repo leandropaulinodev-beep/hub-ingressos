@@ -10,7 +10,10 @@ class SimulatedPaymentProcessor implements PaymentProcessorInterface
     public function process(array $paymentData, float $amount): array
     {
         try {
-            if (!isset($paymentData['metodo']) || !isset($paymentData['numero_cartao'])) {
+            $method = $paymentData['method'] ?? ($paymentData['metodo'] ?? null);
+            $cardNumber = $paymentData['card_number'] ?? ($paymentData['numero_cartao'] ?? null);
+
+            if ($method === null || $cardNumber === null) {
                 return [
                     'success' => false,
                     'statusCode' => 400,

@@ -130,10 +130,15 @@ def reservar_ingresso():
     """
     Reserva uma quantidade de ingressos para um evento
     
-    Payload esperado:
+    Payload esperado (aceita ambos formatos):
     {
         "event_id": 1,
         "quantity": 2
+    }
+    ou
+    {
+        "id_evento": 1,
+        "quantidade": 2
     }
     
     Resposta de sucesso:
@@ -151,21 +156,27 @@ def reservar_ingresso():
     try:
         data = request.get_json()
         
-        # Validação
-        if not data or 'event_id' not in data or 'quantity' not in data:
+        # Validação (EN + PT-BR)
+        if not data:
             return jsonify({
                 'success': False,
-                'error': 'event_id e quantity são obrigatórios'
+                'error': 'event_id/id_evento e quantity/quantidade são obrigatórios'
             }), 400
-        
-        event_id = data['event_id']
-        quantity = data['quantity']
+
+        event_id = data.get('event_id', data.get('id_evento'))
+        quantity = data.get('quantity', data.get('quantidade'))
+
+        if event_id is None or quantity is None:
+            return jsonify({
+                'success': False,
+                'error': 'event_id/id_evento e quantity/quantidade são obrigatórios'
+            }), 400
         
         # Validar tipos
         if not isinstance(event_id, int) or not isinstance(quantity, int):
             return jsonify({
                 'success': False,
-                'error': 'event_id e quantity devem ser inteiros'
+                'error': 'event_id/id_evento e quantity/quantidade devem ser inteiros'
             }), 400
         
         # Tentar reservar; se o evento ainda não existir no catálogo, sincroniza e tenta novamente
