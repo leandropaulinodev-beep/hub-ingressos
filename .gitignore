@@ -1,0 +1,6 @@
+docs/
+.env
+insert_redhot.php
+frontend-react/node_modules/
+backend-python/__pycache__/
+*.pyc
