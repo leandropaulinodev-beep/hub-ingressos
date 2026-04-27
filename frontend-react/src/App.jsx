@@ -52,6 +52,11 @@ const isEventoFinalizado = (dateValue) => {
 
 const isEventoEsgotado = (estoqueDisponivel) => Number(estoqueDisponivel) <= 0;
 
+const sanitizeText = (value) => String(value ?? '')
+  .replace(/[<>]/g, '')
+  .replace(/[\u0000-\u001F\u007F]/g, '')
+  .trim();
+
 function App() {
   const EVENTS_PER_PAGE = 6;
   const [searchTerm, setSearchTerm] = useState('');
@@ -130,15 +135,15 @@ function App() {
   const eventosDoBanco = useMemo(
     () => novosEventos.map((evento) => ({
       id: Number(evento.id),
-      nome: evento.nome,
+      nome: sanitizeText(evento.nome),
       data: String(evento.data_evento).slice(0, 10),
-      local: evento.local,
+      local: sanitizeText(evento.local),
       cidade: 'São Paulo, Brasil',
       estoqueDisponivel: Number(
         evento.estoque_disponivel ?? evento.estoque_total ?? 0
       ),
       preco: Number(evento.preco),
-      descricao: evento.descricao || 'Confira os detalhes completos deste evento e garanta seu ingresso.',
+      descricao: sanitizeText(evento.descricao) || 'Confira os detalhes completos deste evento e garanta seu ingresso.',
     })),
     [novosEventos]
   );

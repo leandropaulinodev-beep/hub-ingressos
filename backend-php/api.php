@@ -7,7 +7,7 @@
  */
 
 require_once 'config.php';
-require_once 'bootstrap.php';
+require_once 'autoload.php';
 
 use HubIngressos\Application\VendaService;
 use HubIngressos\Http\VendaController;
@@ -24,11 +24,86 @@ header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization, X-API-Version');
 
-// Handle CORS preflight
+function getClientIpAddress(): string
+{
+    return $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+}
+
+function applyRateLimit(string $clientIp): void
+{
+    $maxRequests = max(1, RATE_LIMIT_MAX_REQUESTS);
+    $windowSeconds = max(1, RATE_LIMIT_WINDOW_SECONDS);
+    $currentWindow = (int) floor(time() / $windowSeconds);
+    $resetAt = ($currentWindow + 1) * $windowSeconds;
+    $storageFile = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'hub_ingressos_rate_limit_' . md5($clientIp) . '.json';
+
+    $handle = fopen($storageFile, 'c+');
+    if ($handle === false) {
+        return;
+    }
+
+    $state = [
+        'window' => $currentWindow,
+        'count' => 0,
+    ];
+
+    try {
+        if (!flock($handle, LOCK_EX)) {
+            fclose($handle);
+            return;
+        }
+
+        $contents = stream_get_contents($handle);
+        if (is_string($contents) && $contents !== '') {
+            $decoded = json_decode($contents, true);
+            if (is_array($decoded)) {
+                $state['window'] = (int) ($decoded['window'] ?? $currentWindow);
+                $state['count'] = (int) ($decoded['count'] ?? 0);
+            }
+        }
+
+        if ($state['window'] !== $currentWindow) {
+            $state['window'] = $currentWindow;
+            $state['count'] = 0;
+        }
+
+        $state['count']++;
+
+        $remaining = max(0, $maxRequests - $state['count']);
+
+        header('X-RateLimit-Limit: ' . $maxRequests);
+        header('X-RateLimit-Remaining: ' . $remaining);
+        header('X-RateLimit-Reset: ' . $resetAt);
+
+        rewind($handle);
+        ftruncate($handle, 0);
+        fwrite($handle, json_encode($state));
+        fflush($handle);
+        flock($handle, LOCK_UN);
+        fclose($handle);
+
+        if ($state['count'] > $maxRequests) {
+            http_response_code(429);
+            header('Retry-After: ' . max(1, $resetAt - time()));
+            echo json_encode([
+                'success' => false,
+                'error' => 'Muitas requisições. Tente novamente em instantes.',
+            ]);
+            exit;
+        }
+    } catch (Throwable $e) {
+        flock($handle, LOCK_UN);
+        fclose($handle);
+    }
+}
+
+
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
     exit;
 }
+
+applyRateLimit(getClientIpAddress());
 
 try {
     $databaseConnection = new PdoDatabaseConnection();
@@ -68,7 +143,6 @@ try {
         exit;
     }
     
-    // Rotear requisição
     if ($method === 'POST' && $route === 'compras') {
         $inputData = json_decode(file_get_contents('php://input'), true);
         if (!$inputData) {
@@ -79,13 +153,12 @@ try {
             ]);
             exit;
         }
-
-        // Compatibilidade: aceita campos técnicos (EN) e amigáveis (PT-BR).
+       
         $eventId = $inputData['event_id'] ?? ($inputData['id_evento'] ?? null);
         $quantity = $inputData['quantity'] ?? ($inputData['quantidade'] ?? null);
         $paymentData = $inputData['payment_data'] ?? null;
         
-        // Procesar compra
+  
         $response = $vendaController->procesarCompra($eventId, $quantity, $paymentData);
         
         http_response_code($response['statusCode']);
@@ -112,8 +185,7 @@ try {
         echo json_encode($response);
         exit;
     }
-    
-    // Rota não encontrada
+
     http_response_code(404);
     echo json_encode([
         'success' => false,

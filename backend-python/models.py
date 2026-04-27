@@ -139,6 +139,8 @@ class Catalogo:
             if evento:
                 evento.estoque_total -= reserva.quantity
                 evento.estoque_reservado -= reserva.quantity
+
+            del self.reservas[reserva_id]
             
             return True
     

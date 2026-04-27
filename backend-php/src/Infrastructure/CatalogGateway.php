@@ -27,7 +27,8 @@ class CatalogGateway implements CatalogGatewayInterface
                     'event_id' => $eventId,
                     'quantity' => $quantity,
                 ],
-                (int) \HTTP_TIMEOUT
+                (int) \HTTP_TIMEOUT,
+                $this->internalHeaders()
             );
 
             if ($response['http_code'] === 200 && isset($response['data'])) {
@@ -87,7 +88,8 @@ class CatalogGateway implements CatalogGatewayInterface
                 'PUT',
                 $this->catalogServiceUrl . '/api/v1/catalogo/reservas/' . $reservaId . '/liberar',
                 [],
-                (int) \HTTP_TIMEOUT
+                (int) \HTTP_TIMEOUT,
+                $this->internalHeaders()
             );
 
             return $response['http_code'] === 200;
@@ -95,5 +97,30 @@ class CatalogGateway implements CatalogGatewayInterface
             error_log('Erro ao liberar reserva: ' . $e->getMessage());
             return false;
         }
+    }
+
+    public function confirmarReserva(string $reservaId): bool
+    {
+        try {
+            $response = $this->httpClient->request(
+                'PUT',
+                $this->catalogServiceUrl . '/api/v1/catalogo/reservas/' . $reservaId . '/confirmar',
+                [],
+                (int) \HTTP_TIMEOUT,
+                $this->internalHeaders()
+            );
+
+            return $response['http_code'] === 200;
+        } catch (\Exception $e) {
+            error_log('Erro ao confirmar reserva: ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    private function internalHeaders(): array
+    {
+        return [
+            'X-Internal-Service-Token: ' . \INTERNAL_SERVICE_TOKEN,
+        ];
     }
 }

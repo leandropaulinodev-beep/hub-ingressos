@@ -7,20 +7,25 @@ use HubIngressos\Contracts\HttpClientInterface;
 
 class CurlHttpClient implements HttpClientInterface
 {
-    public function request(string $method, string $url, array $data = [], int $timeout = 10): array
+    public function request(string $method, string $url, array $data = [], int $timeout = 10, array $headers = []): array
     {
         $ch = curl_init();
+
+        $httpHeaders = array_merge(
+            [
+                'Content-Type: application/json',
+                'Accept: application/json',
+                'X-API-Version: ' . \API_VERSION,
+            ],
+            $headers
+        );
 
         curl_setopt_array($ch, [
             CURLOPT_URL => $url,
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_TIMEOUT => $timeout,
             CURLOPT_CUSTOMREQUEST => strtoupper($method),
-            CURLOPT_HTTPHEADER => [
-                'Content-Type: application/json',
-                'Accept: application/json',
-                'X-API-Version: ' . \API_VERSION,
-            ],
+            CURLOPT_HTTPHEADER => $httpHeaders,
         ]);
 
         if (in_array(strtoupper($method), ['POST', 'PUT'], true)) {

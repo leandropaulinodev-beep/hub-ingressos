@@ -39,7 +39,8 @@ class PdoEventoRepository implements EventoRepositoryInterface
                 e.criado_em
              FROM eventos e
              ORDER BY criado_em DESC, id DESC
-             LIMIT {$safeLimit}"
+             LIMIT :limit",
+            ['limit' => $safeLimit]
         );
 
         return $stmt->fetchAll();

@@ -10,7 +10,7 @@ Sistema distribuído de venda de ingressos com arquitetura baseada em microservi
 hub-ingressos/
 ├── backend-php/
 │   ├── config.php
-│   ├── bootstrap.php
+│   ├── autoload.php
 │   └── api.php (endpoint)
 │   └── src/
 │       ├── Application/

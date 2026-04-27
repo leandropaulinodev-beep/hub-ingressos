@@ -134,7 +134,7 @@ const PurchaseButton = ({
       if (response.success) {
         setSuccess(false);
         setPurchaseData(null);
-        setCancelMessage(`Compra #${response.data.data.venda_id} cancelada com sucesso!`);
+        setCancelMessage('Compra cancelada com sucesso!');
 
         setTimeout(() => {
           setCancelMessage(null);

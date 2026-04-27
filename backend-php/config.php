@@ -47,6 +47,30 @@ $env = static function ($key, $default = null) use ($envData) {
 	return $default;
 };
 
+$requiredPositiveIntEnv = static function ($key) use ($env) {
+	$value = $env($key);
+
+	if ($value === null || $value === '') {
+		throw new RuntimeException("Variável de ambiente obrigatória ausente: {$key}");
+	}
+
+	if (filter_var($value, FILTER_VALIDATE_INT) === false || (int) $value < 1) {
+		throw new RuntimeException("Variável de ambiente inválida: {$key}");
+	}
+
+	return (int) $value;
+};
+
+$requiredStringEnv = static function ($key) use ($env) {
+	$value = $env($key);
+
+	if ($value === null || trim((string) $value) === '') {
+		throw new RuntimeException("Variável de ambiente obrigatória ausente: {$key}");
+	}
+
+	return trim((string) $value);
+};
+
 // Configurações do banco de dados local
 if (!defined('DB_HOST')) {
 	define('DB_HOST', $env('DB_HOST', 'localhost'));
@@ -74,6 +98,19 @@ if (!defined('HTTP_TIMEOUT')) {
 // Headers padrão para requisições
 if (!defined('API_VERSION')) {
 	define('API_VERSION', $env('API_VERSION', 'v1'));
+}
+
+// Token interno para comunicação entre serviços
+if (!defined('INTERNAL_SERVICE_TOKEN')) {
+	define('INTERNAL_SERVICE_TOKEN', $requiredStringEnv('INTERNAL_SERVICE_TOKEN'));
+}
+
+// Rate limit simples por IP
+if (!defined('RATE_LIMIT_MAX_REQUESTS')) {
+	define('RATE_LIMIT_MAX_REQUESTS', $requiredPositiveIntEnv('RATE_LIMIT_MAX_REQUESTS'));
+}
+if (!defined('RATE_LIMIT_WINDOW_SECONDS')) {
+	define('RATE_LIMIT_WINDOW_SECONDS', $requiredPositiveIntEnv('RATE_LIMIT_WINDOW_SECONDS'));
 }
 
 // Ambiente

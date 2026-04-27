@@ -103,6 +103,11 @@ class VendaService
                 'created_at' => date('Y-m-d H:i:s'),
             ]);
 
+            if (!$this->catalogGateway->confirmarReserva($reservaId)) {
+                $this->db->rollback();
+                return $this->errorResponse('Não foi possível confirmar a reserva no catálogo', 503);
+            }
+
             $this->db->commit();
 
             return $this->successResponse([

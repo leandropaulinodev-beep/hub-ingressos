@@ -4,16 +4,57 @@ Responsável por gerenciar eventos e controlar estoque de ingressos
 """
 
 from flask import Flask, request, jsonify
-from datetime import datetime, timedelta
-import uuid
-import threading
+from datetime import datetime
+from pathlib import Path
+import os
 import requests
-from models import Catalogo, Evento, Reserva
+from models import Catalogo
 
 app = Flask(__name__)
 
+SERVICE_TOKEN_HEADER = 'X-Internal-Service-Token'
+
+
+def load_root_env():
+    env_path = Path(__file__).resolve().parents[1] / '.env'
+    env_data = {}
+
+    if not env_path.exists():
+        return env_data
+
+    for raw_line in env_path.read_text(encoding='utf-8').splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith('#') or '=' not in line:
+            continue
+
+        key, value = line.split('=', 1)
+        env_data[key.strip()] = value.strip().strip('"\'')
+
+    return env_data
+
+
+ENV_DATA = load_root_env()
+INTERNAL_SERVICE_TOKEN = os.getenv('INTERNAL_SERVICE_TOKEN', ENV_DATA.get('INTERNAL_SERVICE_TOKEN', '')).strip()
+
 # Simulando um banco de dados em memória (para o teste)
 catalogo = Catalogo()
+
+
+def require_internal_service_auth():
+    if not INTERNAL_SERVICE_TOKEN:
+        return jsonify({
+            'success': False,
+            'error': 'Token interno não configurado'
+        }), 500
+
+    received_token = request.headers.get(SERVICE_TOKEN_HEADER, '').strip()
+    if received_token != INTERNAL_SERVICE_TOKEN:
+        return jsonify({
+            'success': False,
+            'error': 'Acesso interno não autorizado'
+        }), 401
+
+    return None
 
 
 def sincronizar_eventos_do_banco():
@@ -154,6 +195,10 @@ def reservar_ingresso():
     }
     """
     try:
+        unauthorized_response = require_internal_service_auth()
+        if unauthorized_response is not None:
+            return unauthorized_response
+
         data = request.get_json()
         
         # Validação (EN + PT-BR)
@@ -221,6 +266,10 @@ def liberar_reserva(reserva_id):
     Libera uma reserva (por exemplo, se o pagamento falhar)
     """
     try:
+        unauthorized_response = require_internal_service_auth()
+        if unauthorized_response is not None:
+            return unauthorized_response
+
         sucesso = catalogo.liberar_reserva(reserva_id)
         
         if not sucesso:
@@ -247,6 +296,10 @@ def confirmar_reserva(reserva_id):
     Confirma uma reserva após o pagamento bem-sucedido
     """
     try:
+        unauthorized_response = require_internal_service_auth()
+        if unauthorized_response is not None:
+            return unauthorized_response
+
         sucesso = catalogo.confirmar_reserva(reserva_id)
         
         if not sucesso:
