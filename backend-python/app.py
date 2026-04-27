@@ -87,16 +87,6 @@ def sincronizar_eventos_do_banco():
         print(f'Falha ao sincronizar eventos do banco: {e}')
         return False
 
-@app.route('/health', methods=['GET'])
-def health_check():
-    """Verifica se o serviço está disponível"""
-    return jsonify({
-        'status': 'online',
-        'service': 'Catalogo Service',
-        'timestamp': datetime.now().isoformat()
-    }), 200
-
-
 @app.route('/api/v1/catalogo/eventos', methods=['GET'])
 def listar_eventos():
     """
@@ -176,8 +166,7 @@ def reservar_ingresso():
             return unauthorized_response
 
         data = request.get_json()
-        
-        # Validação (EN + PT-BR)
+    
         if not data:
             return jsonify({
                 'success': False,

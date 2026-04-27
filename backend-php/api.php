@@ -16,7 +16,7 @@ use HubIngressos\Infrastructure\CurlHttpClient;
 use HubIngressos\Infrastructure\PdoDatabaseConnection;
 use HubIngressos\Infrastructure\PdoEventoRepository;
 use HubIngressos\Infrastructure\PdoVendaRepository;
-use HubIngressos\Infrastructure\SimulatedPaymentProcessor;
+use HubIngressos\Infrastructure\SimuladorPrecessaPagamento;
 
 // Headers
 header('Content-Type: application/json; charset=utf-8');
@@ -109,7 +109,7 @@ try {
     $databaseConnection = new PdoDatabaseConnection();
     $httpClient = new CurlHttpClient();
     $catalogGateway = new CatalogGateway($httpClient, CATALOG_SERVICE_URL);
-    $paymentProcessor = new SimulatedPaymentProcessor();
+    $paymentProcessor = new SimuladorPrecessaPagamento();
     $vendaRepository = new PdoVendaRepository($databaseConnection);
     $eventoRepository = new PdoEventoRepository($databaseConnection);
     $vendaService = new VendaService(

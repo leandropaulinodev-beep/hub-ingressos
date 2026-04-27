@@ -5,7 +5,7 @@ namespace HubIngressos\Infrastructure;
 
 use HubIngressos\Contracts\PaymentProcessorInterface;
 
-class SimulatedPaymentProcessor implements PaymentProcessorInterface
+class SimuladorPrecessaPagamento implements PaymentProcessorInterface
 {
     public function process(array $paymentData, float $amount): array
     {
