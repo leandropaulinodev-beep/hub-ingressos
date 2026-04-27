@@ -2,8 +2,13 @@
   "name": "hub-ingressos-workspace",
   "private": true,
   "scripts": {
-    "start": "npm --prefix frontend-react start",
-    "starte": "npm --prefix frontend-react start",
+    "start": "concurrently -n PYTHON,FRONTEND \"npm run start:python\" \"npm run start:frontend\"",
+    "start:frontend": "npm --prefix frontend-react start",
+    "start:python": "cd backend-python && python app.py",
+    "starte": "npm run start",
     "install:frontend": "npm --prefix frontend-react install"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
   }
 }

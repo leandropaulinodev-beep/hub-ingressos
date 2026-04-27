@@ -46,28 +46,28 @@ def sincronizar_eventos_do_banco():
         print(f'Falha ao sincronizar eventos do banco: {e}')
         return False
 
-# Inicializar alguns eventos de exemplo caso a sincronização falhe
-if not sincronizar_eventos_do_banco():
-    catalogo.adicionar_evento(
-        evento_id=7,
-        nome="Show da Banda X",
-        preco=100.00,
-        estoque=50
-    )
+# # Inicializar alguns eventos de exemplo caso a sincronização falhe
+# if not sincronizar_eventos_do_banco():
+#     catalogo.adicionar_evento(
+#         evento_id=7,
+#         nome="Show da Banda X",
+#         preco=100.00,
+#         estoque=50
+#     )
 
-    catalogo.adicionar_evento(
-        evento_id=8,
-        nome="Festival de Música 2026",
-        preco=200.00,
-        estoque=100
-    )
+#     catalogo.adicionar_evento(
+#         evento_id=8,
+#         nome="Festival de Música 2026",
+#         preco=200.00,
+#         estoque=100
+#     )
 
-    catalogo.adicionar_evento(
-        evento_id=9,
-        nome="Teatro - Peça Y",
-        preco=80.00,
-        estoque=200
-    )
+#     catalogo.adicionar_evento(
+#         evento_id=9,
+#         nome="Teatro - Peça Y",
+#         preco=80.00,
+#         estoque=200
+#     )
 
 
 @app.route('/health', methods=['GET'])

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import PurchaseButton from './components/PurchaseButton';
 import { listarNovosEventos } from './services/api';
 import './styles/App.css';
@@ -63,6 +63,7 @@ function App() {
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [novosEventos, setNovosEventos] = useState([]);
+  const [estoqueOverrides, setEstoqueOverrides] = useState({});
   const [loadingNovosEventos, setLoadingNovosEventos] = useState(true);
   const [novosEventosError, setNovosEventosError] = useState('');
   const carouselRef = useRef(null);
@@ -108,23 +109,23 @@ function App() {
     []
   );
 
-  useEffect(() => {
-    const carregarNovosEventos = async () => {
-      setLoadingNovosEventos(true);
-      setNovosEventosError('');
+  const carregarNovosEventos = useCallback(async () => {
+    setLoadingNovosEventos(true);
+    setNovosEventosError('');
 
-      const response = await listarNovosEventos(12);
-      if (response.success) {
-        setNovosEventos(response.data?.data?.eventos || []);
-      } else {
-        setNovosEventosError(response.error || 'Não foi possível carregar os novos eventos.');
-      }
+    const response = await listarNovosEventos(12);
+    if (response.success) {
+      setNovosEventos(response.data?.data?.eventos || []);
+    } else {
+      setNovosEventosError(response.error || 'Não foi possível carregar os novos eventos.');
+    }
 
-      setLoadingNovosEventos(false);
-    };
-
-    carregarNovosEventos();
+    setLoadingNovosEventos(false);
   }, []);
+
+  useEffect(() => {
+    carregarNovosEventos();
+  }, [carregarNovosEventos]);
 
   const eventosDoBanco = useMemo(
     () => novosEventos.map((evento) => ({
@@ -152,8 +153,59 @@ function App() {
       });
     });
 
-    return Array.from(eventosMap.values()).sort((a, b) => a.id - b.id);
-  }, [eventosBase, eventosDoBanco]);
+    return Array.from(eventosMap.values())
+      .map((evento) => ({
+        ...evento,
+        estoqueDisponivel: Number(
+          estoqueOverrides[evento.id] ?? evento.estoqueDisponivel
+        ),
+      }))
+      .sort((a, b) => a.id - b.id);
+  }, [eventosBase, eventosDoBanco, estoqueOverrides]);
+
+  const atualizarEstoqueEvento = (eventId, quantityPurchased = 1) => {
+    const eventoAtual = todosEventos.find((evento) => evento.id === eventId);
+    const estoqueAtual = Number(eventoAtual?.estoqueDisponivel ?? 0);
+    const novoEstoque = Math.max(0, estoqueAtual - Number(quantityPurchased || 0));
+
+    setEstoqueOverrides((current) => ({
+      ...current,
+      [eventId]: novoEstoque,
+    }));
+
+    setSelectedEvent((current) => {
+      if (!current || current.id !== eventId) {
+        return current;
+      }
+
+      return {
+        ...current,
+        estoqueDisponivel: novoEstoque,
+      };
+    });
+
+    carregarNovosEventos();
+  };
+
+  const marcarEventoEsgotado = (eventId) => {
+    setEstoqueOverrides((current) => ({
+      ...current,
+      [eventId]: 0,
+    }));
+
+    setSelectedEvent((current) => {
+      if (!current || current.id !== eventId) {
+        return current;
+      }
+
+      return {
+        ...current,
+        estoqueDisponivel: 0,
+      };
+    });
+
+    carregarNovosEventos();
+  };
 
   const filteredEventos = useMemo(() => {
     const normalizedTerm = searchTerm.trim().toLowerCase();
@@ -343,7 +395,7 @@ function App() {
             <div className="search-box search-box-header">
               <input
                 type="text"
-                placeholder="Busque por eventos, artistas e locais"
+                placeholder="Para buscar por eventos, artistas e locais, basta apenas digitar."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 aria-label="Buscar evento"
@@ -351,9 +403,8 @@ function App() {
             </div>
 
             <nav className="hero-links">
-              <button type="button">Explorar</button>
-              <button type="button">Favoritos</button>
               <button type="button">Meus ingressos</button>
+              <button type="button">Cadastre-se</button>
             </nav>
           </div>
 
@@ -466,7 +517,12 @@ function App() {
               <h2>{selectedEvent.nome}</h2>
               <p><strong>Data:</strong> {formatListDate(selectedEvent.data).full}</p>
               <p><strong>Local:</strong> {selectedEvent.local}</p>
-              <p><strong>Estoque disponível:</strong> {selectedEvent.estoqueDisponivel}</p>
+              <p>
+                <strong>Ingressos disponíveis:</strong>{' '}
+                {Number(selectedEvent.estoqueDisponivel) <= 0
+                  ? 'Esgotados'
+                  : selectedEvent.estoqueDisponivel}
+              </p>
               <p className="event-detail-description">{selectedEvent.descricao}</p>
 
               <PurchaseButton
@@ -476,6 +532,8 @@ function App() {
                 maxQuantity={selectedEvent.estoqueDisponivel}
                 isFinalized={isEventoFinalizado(selectedEvent.data)}
                 isSoldOut={isEventoEsgotado(selectedEvent.estoqueDisponivel)}
+                onPurchaseSuccess={atualizarEstoqueEvento}
+                onStockUnavailable={marcarEventoEsgotado}
               />
             </div>
           </section>

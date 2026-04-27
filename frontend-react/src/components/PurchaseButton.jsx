@@ -16,6 +16,8 @@ const PurchaseButton = ({
   maxQuantity = 5,
   isFinalized = false,
   isSoldOut = false,
+  onPurchaseSuccess = () => {},
+  onStockUnavailable = () => {},
 }) => {
   const maxAllowedQuantity = Math.max(0, Math.min(10, Number(maxQuantity) || 0));
   const isBlocked = isFinalized || isSoldOut;
@@ -57,7 +59,7 @@ const PurchaseButton = ({
    */
   const handleCompra = async () => {
     if (isSoldOut) {
-      setError('Este evento está esgotado no momento.');
+      setError(null);
       return;
     }
 
@@ -89,6 +91,10 @@ const PurchaseButton = ({
       if (response.success) {
         setSuccess(true);
         setPurchaseData(response.data.data);
+        onPurchaseSuccess(
+          eventId,
+          Number(response.data?.data?.quantity ?? selectedQuantity)
+        );
       } else {
         // Erro na compra
         setError(response.error);
@@ -98,6 +104,9 @@ const PurchaseButton = ({
           setError('Serviço temporariamente indisponível. Tente novamente em alguns momentos.');
         } else if (response.statusCode === 402) {
           setError('Pagamento recusado. Verifique suas informações bancárias.');
+        } else if (response.statusCode === 409) {
+          onStockUnavailable(eventId);
+          setError(null);
         }
       }
     } catch (err) {
