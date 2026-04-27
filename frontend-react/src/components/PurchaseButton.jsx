@@ -212,7 +212,7 @@ const PurchaseButton = ({
           <div>
             <p>Compra realizada com sucesso!</p>
             <p className="purchase-details">
-              Venda #{purchaseData.venda_id} - Total: R${Number(purchaseData.total_price).toFixed(2)}
+              Total pago: {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(purchaseData.total_price) || 0)}
             </p>
           </div>
         </div>
